@@ -25,10 +25,11 @@
 ;
 ;     A number of functions have been defined as shortcuts for interaction
 ; purposes. Non-mutative functions are intended for L-Matrices, while the
-; mutative functions are intended for Matrices, with the exception of rank,
-; REF, and RREF?.
+; mutative functions are intended for Matrices.
 
 (provide 
+ matrix
+ M
  new-matrix
  NM
  transpose
@@ -41,20 +42,8 @@
  ERO-swap!
  ERO-mult!
  ERO-plus!
- Quiet-ERO-swap!
- Quiet-ERO-mult!
- Quiet-ERO-plus!
- swp
- mlt
- pls
- qswp
- qmlt
- qpls
  row-reduce!
  RREF!
- REF?
- RREF?
- rank
  display-matrix
  display-reverse)
 
@@ -65,25 +54,13 @@
 ;; Shorthand for Interactions
 (define M matrix)
 
-;; leading-co-eff : L-Vector -> (Union false Num)
+;; non-zero? : L-Vector -> Boolean
 ;; PRE:   true
-;; POST:  Returns the first non-zero entry in an L-Vector.
-;;        If none, returns false.
-(define (leading-co-eff a)
-  (cond [(empty? a) false]
-        [(not (zero? (first a))) (first a)]
-        [else (leading-co-eff (rest a))]))
-
-;; leading-index : L-Vector -> (Union false Nat)
-;; PRE:   true
-;; POST:  Returns the index of the first non-zero entry in an L-Vector.
-;;        If none, returns false.
-(define (leading-index a)
-  (define (search v i)
-    (cond [(empty? v) false]
-          [(not (zero? (first v))) i]
-          [else (search (rest v) (add1 i))]))
-  (search a 0))
+;; POST:  Returns true if L-Vector a is non-zero.
+(define (non-zero? a)
+  (cond [(empty? a) true]
+        [(zero? (first a)) false]
+        [else (non-zero? (rest a))]))
 
 ;; build-identity : Nat Nat Nat -> L-Matrix
 ;; PRE:   true
@@ -238,7 +215,7 @@
 ;; ERO-swap! : Matrix Nat Nat -> Void
 ;; PRE:   row1, row2 are within range.
 ;; POST:  Performs the Elementary Row Operation of row exchange on Matrix A,
-;;        for row1 <-> row2. The operation and results are displayed.
+;         for row1 <-> row2.
 (define (ERO-swap! A row1 row2)
   (define EM (EM-swap (matrix-entries A) row1 row2))
   (set-matrix-entries! A (matrix-multiply EM (matrix-entries A)))
@@ -246,20 +223,11 @@
   (printf "Operation: Swapping R~a <-> R~a\n" row1 row2)
   (display-matrix A))
 
-;; Quiet-ERO-swap! : Matrix Nat Nat -> Void
-;; PRE:   row1, row2 are within range.
-;; POST:  Performs the Elementary Row Operation of row exchange on Matrix A,
-;;        for row1 <-> row2.
-(define (Quiet-ERO-swap! A row1 row2)
-  (define EM (EM-swap (matrix-entries A) row1 row2))
-  (set-matrix-entries! A (matrix-multiply EM (matrix-entries A)))
-  (set-matrix-reverse! A (matrix-multiply EM (matrix-reverse A))))
-
 ;; ERO-mult! : Matrix Nat Num -> Void
 ;; PRE:   row is within range.
 ;;        scalar is non-zero.
 ;; POST:  Performs the Elementary Row Operation of scalar multiplication on
-;;        Matrix A, for scalar*row. The operation and results are displayed.
+;;        Matrix A, for scalar*row.
 (define (ERO-mult! A row scalar)
   (define EM (EM-mult (matrix-entries A) row scalar))
   (set-matrix-entries! A (matrix-multiply EM (matrix-entries A)))
@@ -267,21 +235,11 @@
   (printf "Operation: Multiplying R~a by ~a\n" row scalar)
   (display-matrix A))
 
-;; Quiet-ERO-mult! : Matrix Nat Num -> Void
-;; PRE:   row is within range.
-;;        scalar is non-zero.
-;; POST:  Performs the Elementary Row Operation of scalar multiplication on
-;;        Matrix A, for scalar*row.
-(define (Quiet-ERO-mult! A row scalar)
-  (define EM (EM-mult (matrix-entries A) row scalar))
-  (set-matrix-entries! A (matrix-multiply EM (matrix-entries A)))
-  (set-matrix-reverse! A (matrix-multiply EM (matrix-reverse A))))
-
 ;; ERO-plus! : Matrix Nat Nat Num -> Void
 ;; PRE:   row1, row2 are within range.
 ;;        scalar is non-zero.
 ;; POST:  Performs the Elementary Row Operation of row addition on Matrix A,
-;;        for row1+scalar*row2. The operation and results are displayed.
+;         for row1+scalar*row2.
 (define (ERO-plus! A row1 row2 scalar)
   (define EM (EM-plus (matrix-entries A) row1 row2 scalar))
   (set-matrix-entries! A (matrix-multiply EM (matrix-entries A)))
@@ -289,23 +247,10 @@
   (printf "Operation: Adding ~axR~a to R~a\n" scalar row1 row2)
   (display-matrix A))
 
-;; Quiet-ERO-plus! : Matrix Nat Nat Num -> Void
-;; PRE:   row1, row2 are within range.
-;;        scalar is non-zero.
-;; POST:  Performs the Elementary Row Operation of row addition on Matrix A,
-;;        for row1+scalar*row2. The operation and results are displayed.
-(define (Quiet-ERO-plus! A row1 row2 scalar)
-  (define EM (EM-plus (matrix-entries A) row1 row2 scalar))
-  (set-matrix-entries! A (matrix-multiply EM (matrix-entries A)))
-  (set-matrix-reverse! A (matrix-multiply EM (matrix-reverse A))))
-
 ;; Shorthand for Interactions
 (define swp ERO-swap!)
 (define mlt ERO-mult!)
 (define pls ERO-plus!)
-(define qswp Quiet-ERO-swap!)
-(define qmlt Quiet-ERO-mult!)
-(define qpls Quiet-ERO-plus!)
 
 ;; display-L-matrix : L-Matrix -> Void
 ;; PRE:   true
@@ -336,7 +281,7 @@
 
 ;; row-reduce! : Matrix -> Void
 ;; PRE:   true
-;; POST:  Row-reduces Matrix A. (Verbose)
+;; POST:  Row-reduces Matrix A.
 ;; Notes: For the algorithm below, n is used to record the number of
 ;;        rows.
 (define (row-reduce! A)
@@ -348,7 +293,7 @@
   ;;        Performs scalar multiplication on that row, if it exists.
   (define (row-search n i entries)
     (cond [(empty? entries) false]
-          [(< i n)
+          [(<= i n)
            (row-search n (add1 i) (rest entries))]
           [else
            (define nth-entry (list-ref (first entries) n))
@@ -388,151 +333,30 @@
   ;;        Increment n, and repeat until n = rows of Matrix A.
   (define (reduce n)
     (define entries (matrix-entries A))
-    (cond [(= n rows)
-           (printf "Row Reduction Complete\n")]
-          [else
-           (printf "Reducing Column ~a\n" (add1 n))
-           (define search-result (row-search n 0 entries))
-           (printf "Search result: ~a\n" search-result)
-           (cond [search-result
-                  (row-zero n 0 search-result entries)
-                  (row-swap n search-result)]
-                 [else
-                  (printf "No suitable rows found for Column ~a\n" (add1 n))])
-           (printf "End of Column ~a Reduction\n" (add1 n))
-           (reduce (add1 n))]))
-  (reduce 0)
-  (printf "Reduced Row Echelon Form:\n")
-  (display-matrix A))
-
-;; quiet-row-reduce! : Matrix -> Void
-;; PRE:   true
-;; POST:  Row-reduces Matrix A. (Quiet)
-;; Notes: For the algorithm below, n is used to record the number of
-;;        rows.
-(define (quiet-row-reduce! A)
-  (define rows (length (matrix-entries A)))
-  ;; row-search : Nat Nat L-Matrix -> (Union false Nat)
-  ;; PRE:   true
-  ;; POST:  Returns the index of the first suitable row for which the n-th
-  ;;        entry is non-zero, or false if such a row does not exist.
-  ;;        Performs scalar multiplication on that row, if it exists.
-  (define (row-search n i entries)
-    (cond [(empty? entries) false]
-          [(< i n)
-           (row-search n (add1 i) (rest entries))]
-          [else
-           (define nth-entry (list-ref (first entries) n))
-           (cond [(not (= 0 nth-entry))
-                  (qmlt A (add1 i) (/ nth-entry))
-                  i]
-                 [else
-                  (row-search n (add1 i) (rest entries))])]))
-  ;; row-zero : Nat Nat Nat L-Matrix -> Void
-  ;; PRE:   true
-  ;; POST:  Performs row reduction by row addition using the row found by
-  ;;        row-search, for each row in the L-Matrix.
-  (define (row-zero n i origin entries)
-    (cond [(empty? entries) void]
-          [(= i origin)
-           (row-zero n (add1 i) origin (rest entries))]
-          [else
-           (define elim-co-eff
-             (- (list-ref (first entries) n)))
-           (qpls A (add1 i) (add1 origin) elim-co-eff)
-           (row-zero n (add1 i) origin (rest entries))]))
-  ;; row-swap : Nat Nat -> Void
-  ;; PRE:   true
-  ;; POST:  Performs row exchange if necessary.
-  (define (row-swap n i)
-    (cond [(= n i) void]
-          [else
-           (qswp A (add1 n) (add1 i))]))
-  ;; reduce : Nat -> Void
-  ;; PRE:   true
-  ;; POST:  Enacts the following algorithm:
-  ;;        Let n be the number of completed columns via row reductions.
-  ;;        Search n-th entry in each column for a suitable row for
-  ;;        row addition, via row-search.
-  ;;        Performs row reduction if such a row exists for n, via row-zero.
-  ;;        Performs row exchange if required, via row-swap.
-  ;;        Increment n, and repeat until n = rows of Matrix A.
-  (define (reduce n)
-    (define entries (matrix-entries A))
+    (printf "Reducing Column ~a\n" (add1 n))
     (cond [(= n rows) void]
           [else
            (define search-result (row-search n 0 entries))
            (cond [search-result
                   (row-zero n 0 search-result entries)
-                  (row-swap n search-result)])
+                  (row-swap n search-result)
+                  (display-matrix A)]
+                 [else
+                  (printf "No leading numbers found for Column ~a\n" n)])
+           (printf "End of Column ~a Reduction\n" n)
            (reduce (add1 n))]))
-  (reduce 0))
+  (reduce 0)
+  (printf "Row-Reduced Eschelon Form:\n")
+  (display-matrix A))
 ;; Shorthand for Interactions
 (define RREF! row-reduce!)
-(define QRREF! quiet-row-reduce!)
 
-;; REF? : Matrix -> Boolean
-;; PRE:   true
-;; POST:  Returns true if the Matrix A is in Row Echelon Form.
-;; Notes: A is in Row Echelon Form if: 
-;;          1. All non-zero rows are above all zero rows.
-;;          2. Leading co-efficients are strictly to the right of any leading 
-;;             co-efficients in rows above it.
-(define (REF? A)
-  (define entries (matrix-entries A))
-  (define (criterion-search last-lead-index zero-row entries)
-    (cond [(empty? entries) true]
-          [else 
-           (define lead-index (leading-index (first entries)))
-           (cond [(and lead-index 
-                       (or zero-row
-                           (<= lead-index last-lead-index)))
-                  false]
-                 [(false? lead-index)
-                  (criterion-search +inf.0 true (rest entries))]
-                 [else
-                  (criterion-search lead-index zero-row (rest entries))])]))
-  (criterion-search -inf.0 false entries))
 
-;; RREF? : Matrix -> Boolean
-;; PRE:   true
-;; POST:  Returns true if the Matrix A is in Reduced Row Echelon Form.
-;; Notes: A is in Reduced Row Echelon Form if:
-;;          1. A is in Row Echelon Form
-;;          2. All leading co-efficients are 1
-;;          3. All leading 1's are the only non-zero entries in the column.
-(define (RREF? A)
-  (define entries (matrix-entries A))
-  (define entries-T (transpose entries))
-  (define (loneliness? v n i)
-    (cond [(empty? v) true]
-          [(or (= n i)
-               (zero? (first v)))
-           (loneliness? (rest v) n (add1 i))]
-          [else false]))
-  (define (valid-row? v v-T)
-    (define result (leading-co-eff v))
-    (or (not result)
-        (and (= result 1)
-             (loneliness? v-T (leading-index v) 0))))
-  (define (criterion-search A A-T)
-    (cond [(empty? A) true]
-          [(valid-row? (first A) (first A-T))
-           (criterion-search (rest A) (rest A-T))]
-          [else false]))
-  (and (REF? A)
-       (criterion-search entries entries-T)))
+(define a '((1 4 7) 
+            (2 5 8) 
+            (3 6 9)))
+(define b '((1 0 0) 
+            (0 0 1) 
+            (0 1 0)))
 
-;; rank : Matrix -> Nat
-;; PRE:   true
-;; POST:  Returns the rank of Matrix A.
-(define (rank A)
-  (define RREF
-    (cond [(RREF? A) (matrix-entries A)]
-          [else
-           (define R (new-matrix (matrix-entries A)))
-           (QRREF! R)
-           (matrix-entries R)]))
-  (length (filter (lambda (x)
-                    (member 1 x))
-                  RREF)))
+(define A (NM a))
