@@ -133,7 +133,7 @@
          (+ (* (first a) (first b))
             (vector-multiply (rest a) (rest b)))]))
 
-;; row-multiply : L-Vector L-Matrix -> Num
+;; row-multiply : L-Vector L-Matrix -> L-Vector
 ;; PRE:   true
 ;; POST:  Returns the vector-matrix product of a and B.
 (define (row-multiply a B)
@@ -146,8 +146,8 @@
 ;; PRE:   true
 ;; POST:  Sets A to be the vector-matrix product of a and B.
 (define (row-multiply! a B)
-  (set-matrix-entries! B (row-multiply a (matrix-entries B)))
-  (set-matrix-reverse! B (row-multiply a (matrix-reverse B))))
+  (set-matrix-entries! B (list (row-multiply a (matrix-entries B))))
+  (set-matrix-reverse! B (list (row-multiply a (matrix-reverse B)))))
 
 ;; transpose : L-Matrix -> L-Matrix
 ;; PRE:   true
