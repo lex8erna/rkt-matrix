@@ -15,6 +15,7 @@ A `Matrix` is defined as any `(matrix L-Matrix L-Matrix)`. <br/>
 We use two `L-Matrices` in order to store a n by m matrix and an additional m by n matrix, which we will define as the reverse matrix, in which each entry in the main diagonal is 1. When n = m, the reverse matrix is an identity matrix.
 ##Basics
 ###new-matrix
+
 To create a new `Matrix` from an equivalent `L-Matrix`, we apply the `new-matrix` function on it. `NM` is an equivalent short form.<br/>
 
     Syntax: (new-matrix <L-Matrix>)
@@ -25,9 +26,16 @@ To create a new `Matrix` from an equivalent `L-Matrix`, we apply the `new-matrix
      (define A (new-matrix l-matrix))
      (define A-2 (NM l-matrix))
 
+###new-identity
+To create a new identity `Matrix` of dimension `n`, we use `new-identity`. `NI` is an equivalent short form.<br/>
+
+    Syntax: (new-identity <L-Matrix>)
+            (NI <L-Matrix>)
+    >(define A (new-identity 3))
+
 ###display-matrix
 
-To display the contents of the matrix, we use `display-matrix`.
+To display the contents of the matrix, we use `display-matrix`. `DM` is an equivalent short form.
 
     Syntax: (display-matrix <Matrix>)
     >(define l-matrix '((1 2 3)
@@ -41,7 +49,7 @@ To display the contents of the matrix, we use `display-matrix`.
     
 ###display-reverse
 
-To display the contents of the reverse matrix, we use `display-reverse`.
+To display the contents of the reverse matrix, we use `display-reverse`. `DR` is an equivalent short form.
 
     Syntax: (display-reverse <Matrix>)
     >(define l-matrix '((1 2 3)
@@ -98,7 +106,7 @@ The following functions produce an elementary `L-Matrix` of the same dimension o
     (0 0 1)
 
 ##Basic Operations
-The following functions perform simple operations on `L-Matrices` and `Matrices`.
+The following functions perform simple operations on `L-Vectors`, `L-Matrices`, and `Matrices`.
 ###transpose/transpose!
 
 `transpose` performs matrix transposition on the given `L-Matrix`. 
@@ -123,9 +131,47 @@ The following functions perform simple operations on `L-Matrices` and `Matrices`
     (2 5 8)
     (3 6 9)
 
+###vector-multiply
+`matrix-multiply` performs vector multiplication axb.
+
+    Syntax: (matrix-multiply <L-Matrix> <L-Matrix>)
+    >(define l-matrix '((1 5 9)
+                        (0 1 0)
+                        (0 3 2)))
+     (define l-matrix2 '((1 0 0)
+                         (0 1 0)
+                         (0 3 2)))
+     (matrix-multiply l-matrix l-matrix2)
+    '((1 32 18) (0 1 0)(0 9 4))
+
+
+###row-multiply/row-multiply!
+
+`row-multiply` performs vector-matrix multiplication axB.
+
+    Syntax: (row-multiply <L-Vector> <L-Matrix>)
+    >(define l-vector '(1 5 9))
+     (define l-matrix '((1 0 0)
+                        (0 1 0)
+                        (0 3 2)))
+     (row-multiply l-vector l-matrix)
+    '(1 5 33)
+
+`row-multiply!` is the equivalent for `Matrices`.
+
+    Syntax: (row-multiply! <L-Vector> <Matrix>)
+    >(define l-vector '(1 5 9))
+     (define l-matrix '((1 0 0)
+                        (0 1 0)
+                        (0 3 2)))
+     (define A (new-matrix l-matrix))
+     (row-multiply! l-vector A)
+     (display-matrix A)
+    (1 5 33)
+
 ###matrix-multiply/matrix-multiply!
 
-`matrix-multiply` performs matrix-matrix multiplication AxB.
+`matrix-multiply` performs matrix multiplication AxB.
 
     Syntax: (matrix-multiply <L-Matrix> <L-Matrix>)
     >(define l-matrix '((1 5 9)
@@ -304,3 +350,20 @@ The following functions perform more complex operations based on the properties 
      (define A (new-matrix l-matrix))
      (rank A)
     2
+
+###inverse
+`inverse` produces the inverse `Matrix` of the given one.
+
+    Syntax: (inverse <Matrix>)
+    > (define R (new-matrix '((1 0 0)
+                              (0 1 0)
+                              (0 2 1))))
+      (define C (inverse R))
+    > (DR C)
+    (1 0 0)
+    (0 1 0)
+    (0 0 1)
+    > (DM C)
+    (1 0 0)
+    (0 1 0)
+    (0 -2 1)
