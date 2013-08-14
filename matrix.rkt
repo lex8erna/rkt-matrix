@@ -24,15 +24,20 @@
 ; for any L-Matrix of dimension n by m where n != m.
 ;
 ;     A number of functions have been defined as shortcuts for interaction
-; purposes. Non-mutative functions are intended for L-Matrices, while the
-; mutative functions are intended for Matrices, with the exception of rank,
-; REF, and RREF?.
+; purposes. Non-mutative functions are generally intended for L-Matrices, 
+; while the mutative functions are intended for Matrices, with a few 
+; exceptions.
 
 (provide 
  new-matrix
  NM
+ new-identity
+ NI
  transpose
  transpose!
+ vector-multiply
+ row-multiply
+ row-multiply!
  matrix-multiply
  matrix-multiply!
  EM-swap
@@ -55,8 +60,11 @@
  REF?
  RREF?
  rank
+ inverse
  display-matrix
- display-reverse)
+ display-reverse
+ DM
+ DR)
 
 ;; An L-Vector is a (listof Num)
 ;; An L-Matrix is a (listof Vector)
@@ -97,6 +105,15 @@
                                      [else 0])))
                (build-identity (add1 i) n m))]))
 
+;; new-identity : Nat -> Matrix
+;; PRE:   true
+;; POST:  Produces a new identity Matrix of dimensions n by n.
+(define (new-identity n)
+  (define ident-matrix (build-identity 0 n n))
+  (M ident-matrix ident-matrix))
+;; Shorthand for Interactions
+(define NI new-identity)
+
 ;; new-matrix : L-Matrix -> Matrix
 ;; PRE:   true
 ;; POST:  Produces a new Matrix.
@@ -124,6 +141,13 @@
         [else
          (cons (vector-multiply a (first B))
                (row-multiply a (rest B)))]))
+
+;; row-multiply! : L-Vector Matrix -> Void
+;; PRE:   true
+;; POST:  Sets A to be the vector-matrix product of a and B.
+(define (row-multiply! a B)
+  (set-matrix-entries! B (row-multiply a (matrix-entries B)))
+  (set-matrix-reverse! B (row-multiply a (matrix-reverse B))))
 
 ;; transpose : L-Matrix -> L-Matrix
 ;; PRE:   true
@@ -334,6 +358,10 @@
 (define (display-reverse A)
   (display-L-matrix (matrix-reverse A)))
 
+;; Shorthand for Interactions
+(define DM display-matrix)
+(define DR display-reverse)
+
 ;; row-reduce! : Matrix -> Void
 ;; PRE:   true
 ;; POST:  Row-reduces Matrix A. (Verbose)
@@ -393,7 +421,7 @@
           [else
            (printf "Reducing Column ~a\n" (add1 n))
            (define search-result (row-search n 0 entries))
-           (printf "Search result: ~a\n" search-result)
+           (printf "Search result: R~a\n" search-result)
            (cond [search-result
                   (row-zero n 0 search-result entries)
                   (row-swap n search-result)]
@@ -536,3 +564,21 @@
   (length (filter (lambda (x)
                     (member 1 x))
                   RREF)))
+
+;; inverse : Matrix -> (Union false Matrix)
+;; PRE:   true
+;; POST:  Returns the inverse Matrix of Matrix A, if it exists.
+;;        Returns false otherwise.
+(define (inverse A)
+  (define entries (matrix-entries A))
+  (cond [(= (length entries) 
+            (length (first entries)))
+         (define copy (new-matrix entries))
+         (QRREF! copy)
+         (and (equal? (matrix-entries copy)
+                      (build-identity 0 (length entries)
+                                      (length entries)))
+              (M (matrix-reverse copy)
+                 (matrix-entries copy)))]
+        [else false]))
+
