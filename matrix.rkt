@@ -29,6 +29,7 @@
 ; exceptions.
 
 (provide 
+ l-matrix?
  new-matrix
  NM
  new-identity
@@ -67,7 +68,9 @@
  DR)
 
 ;; An L-Vector is a (listof Num)
-;; An L-Matrix is a (listof Vector)
+;; An L-Matrix is a (listof L-Vector),
+;; where (length L-Vector) is equal for all L-Vectors in the L-Matrix
+
 ;; A Matrix is a (matrix L-Matrix L-Matrix)
 (define-struct matrix (entries reverse) #:mutable)
 ;; Shorthand for Interactions
@@ -114,13 +117,37 @@
 ;; Shorthand for Interactions
 (define NI new-identity)
 
+;; l-matrix? : (listof L-Vector) -> Boolean
+;; PRE:   true
+;; POST:  Returns the true iff the candidate is an L-Matrix
+(define (l-matrix? candidate)
+  (define n (length candidate))
+  (define m (length (first candidate)))
+  (define (verify-length vector count)
+    (cond [(empty? vector)
+           (= count m)]
+          [(number? (first vector))
+           (verify-length (rest vector) (add1 count))]
+          [else false]))
+  (define (verify-consistency matrix)
+    (define test-result 
+      (or (empty? matrix)
+          (verify-length (first matrix) 0)))
+    (cond [(empty? matrix) true]
+          [test-result
+           (verify-consistency (rest matrix))]
+          [else false]))
+  (verify-consistency candidate))
+
 ;; new-matrix : L-Matrix -> Matrix
 ;; PRE:   true
 ;; POST:  Produces a new Matrix.
 (define (new-matrix A)
-  (define n (length A))
-  (define m (length (first A)))
-  (M A (build-identity 0 n m)))
+  (cond [(l-matrix? A)
+         (define n (length A))
+         (define m (length (first A)))
+         (M A (build-identity 0 n m))]
+        [else (error "Not a valid matrix of n by m dimension.")]))
 ;; Shorthand for Interactions
 (define NM new-matrix)
 
